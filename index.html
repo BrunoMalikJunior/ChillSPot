@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,26 +8,21 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#10131b;color:#f5f5f5;font-family:Arial,sans-serif}
-header{background:#191e2b;padding:18px;text-align:center;border-bottom:1px solid #303849}
-header h1{margin:0;color:#65e6c2}
-header p{margin:6px 0 0;color:#aab3c3}
+header{background:#191e2b;padding:20px;text-align:center;border-bottom:1px solid #303849}
+header h1{margin:0;color:#65e6c2;font-size:30px}
+header p{color:#aab3c3;margin:7px 0 0}
 main{max-width:650px;margin:auto;padding:16px}
 .panel,.post{background:#1b2230;border:1px solid #303849;border-radius:14px;padding:16px;margin-bottom:16px}
-input,textarea,button{width:100%;padding:12px;margin:6px 0;border-radius:9px;border:1px solid #3b465a;background:#111722;color:white;font-size:15px}
-textarea{min-height:75px;resize:vertical}
+input,textarea,button{width:100%;padding:12px;margin:7px 0;border-radius:9px;border:1px solid #3b465a;background:#111722;color:white;font-size:15px}
+textarea{min-height:80px}
 button{background:#65e6c2;color:#10221e;font-weight:bold;border:0;cursor:pointer}
 button.secondary{background:#303849;color:white}
-button.danger{background:#b84d5b;color:white}
-button:disabled{opacity:.5}
-.hidden{display:none!important}
 .muted{color:#aab3c3;font-size:13px}
-.post img,.post video{width:100%;max-height:440px;object-fit:contain;border-radius:10px;margin-top:10px;background:#080b10}
-.post video{max-height:500px}
-.post h3{margin:5px 0}
+.hidden{display:none!important}
+.post img,.post video{width:100%;max-height:450px;object-fit:contain;border-radius:10px;margin-top:10px;background:#080b10}
 .actions{display:flex;gap:8px}
 .actions button{flex:1}
 #status{padding:10px;color:#65e6c2}
-hr{border:0;border-top:1px solid #303849;margin:16px 0}
 </style>
 </head>
 <body>
@@ -42,305 +36,231 @@ hr{border:0;border-top:1px solid #303849;margin:16px 0}
 
 <section class="panel" id="auth">
 <h2>Welcome to ChillSPot</h2>
-<p class="muted">Create an account or log in.</p>
-<input id="displayName" placeholder="Your display name (for sign up)">
+<p class="muted">Join the community or log in.</p>
+<input id="displayName" placeholder="Your display name">
 <input id="email" type="email" placeholder="Email address">
 <input id="password" type="password" placeholder="Password">
 <button id="signup">Create account</button>
 <button class="secondary" id="login">Log in</button>
-<p class="muted" id="authMessage"></p>
+<p id="authMessage" class="muted"></p>
 </section>
 
 <section class="panel hidden" id="member">
 <h2 id="welcome">Welcome!</h2>
-<p class="muted">You're signed in to ChillSPot.</p>
 <button class="secondary" id="logout">Log out</button>
 </section>
 
 <section class="panel hidden" id="createPost">
 <h2>📝 Create a post</h2>
 <textarea id="postText" placeholder="What's happening?"></textarea>
-<label class="muted">Add a photo (optional)</label>
+<label class="muted">Choose a photo (optional)</label>
 <input id="postImage" type="file" accept="image/*">
 <button id="publishPost">Share post</button>
 <hr>
-<h2>🎬 Upload a reel</h2>
-<input id="reelCaption" placeholder="Write a caption for your reel">
-<label class="muted">Choose a video</label>
+<h2>🎬 Create a reel</h2>
+<input id="reelCaption" placeholder="Write a caption">
+<label class="muted">Choose your video</label>
 <input id="reelVideo" type="file" accept="video/*">
 <button id="publishReel">Share reel</button>
 </section>
 
 <h2>🌎 Community feed</h2>
-<div id="feed"><p class="muted">Loading posts...</p></div>
+<div id="feed">Loading ChillSPot...</div>
 </main>
 
 <script>
 const SUPABASE_URL = "https://ccbmsrehsufakvkzfwpc.supabase.co";
-const SUPABASE_KEY = "PASTE_YOUR_PUBLISHABLE_KEY_HERE";
+const SUPABASE_KEY = "sb_publishable_rWGMbKhFrMp0HZtp6hMQGQ_cjlhgqXX";
 
-const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const db = window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let currentUser = null;
-let currentProfile = null;
 
 const $ = id => document.getElementById(id);
 const status = message => $("status").textContent = message;
 
-function escapeHTML(value) {
-  return String(value ?? "").replace(/[&<>"']/g, char => ({
-    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
-  }[char]));
+function escapeHTML(value){
+ return String(value ?? "").replace(/[&<>"']/g,c=>({
+ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+ }[c]));
 }
 
-async function refreshUser() {
-  const {data:{user}} = await db.auth.getUser();
-  currentUser = user;
-
-  $("auth").classList.toggle("hidden", !!user);
-  $("member").classList.toggle("hidden", !user);
-  $("createPost").classList.toggle("hidden", !user);
-
-  if (user) {
-    const {data} = await db.from("profiles")
-      .select("*").eq("id", user.id).maybeSingle();
-    currentProfile = data;
-    $("welcome").textContent = "Welcome, " +
-      (data?.display_name || user.email || "member") + "!";
-  } else {
-    currentProfile = null;
-  }
+async function refreshUser(){
+ const {data,error}=await db.auth.getUser();
+ if(error) throw error;
+ currentUser=data.user;
+ $("auth").classList.toggle("hidden",!!currentUser);
+ $("member").classList.toggle("hidden",!currentUser);
+ $("createPost").classList.toggle("hidden",!currentUser);
+ if(currentUser){
+  const {data:profile}=await db.from("profiles").select("*").eq("id",currentUser.id).maybeSingle();
+  $("welcome").textContent="Welcome, "+(profile?.display_name || currentUser.email)+"!";
+ }
 }
 
-async function signUp() {
-  const email = $("email").value.trim();
-  const password = $("password").value;
-  const displayName = $("displayName").value.trim() || "New member";
+async function signUp(){
+ const email=$("email").value.trim();
+ const password=$("password").value;
+ const displayName=$("displayName").value.trim() || "New member";
+ if(!email || password.length<6){
+  $("authMessage").textContent="Enter an email and a password of at least 6 characters.";
+  return;
+ }
+ $("authMessage").textContent="Creating your account...";
+ const {error}=await db.auth.signUp({
+  email,password,options:{data:{display_name:displayName}}
+ });
+ $("authMessage").textContent=error ? error.message : "Account created! Check your email for confirmation if requested, then log in.";
+ if(!error) await refreshUser();
+}
 
-  if (!email || password.length < 6) {
-    $("authMessage").textContent = "Enter an email and a password with at least 6 characters.";
-    return;
-  }
+async function logIn(){
+ const {error}=await db.auth.signInWithPassword({
+  email:$("email").value.trim(),
+  password:$("password").value
+ });
+ if(error){
+  $("authMessage").textContent=error.message;
+  return;
+ }
+ await refreshUser();
+ await loadFeed();
+ status("Welcome to ChillSPot!");
+}
 
-  $("authMessage").textContent = "Creating your account...";
-  const {error} = await db.auth.signUp({
-    email,
-    password,
-    options:{data:{display_name:displayName}}
+async function logOut(){
+ await db.auth.signOut();
+ await refreshUser();
+ await loadFeed();
+ status("You've logged out.");
+}
+
+async function uploadFile(bucket,file){
+ if(file.size>50*1024*1024) throw new Error("Please choose a file smaller than 50 MB.");
+ const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+ const path=currentUser.id+"/"+crypto.randomUUID()+"-"+safeName;
+ const {error}=await db.storage.from(bucket).upload(path,file);
+ if(error) throw error;
+ return db.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+}
+
+async function publishPost(){
+ if(!currentUser)return;
+ const content=$("postText").value.trim();
+ const file=$("postImage").files[0];
+ if(!content&&!file){status("Write something or choose a photo first.");return;}
+ try{
+  status("Sharing your post...");
+  const image_url=file?await uploadFile("post-images",file):null;
+  const {error}=await db.from("posts").insert({
+   user_id:currentUser.id,content,image_url
   });
-
-  if (error) {
-    $("authMessage").textContent = error.message;
-  } else {
-    $("authMessage").textContent =
-      "Account created! Check your email if confirmation is required, then log in.";
-    await refreshUser();
-  }
-}
-
-async function logIn() {
-  const {data,error} = await db.auth.signInWithPassword({
-    email:$("email").value.trim(),
-    password:$("password").value
-  });
-
-  if (error) {
-    $("authMessage").textContent = error.message;
-  } else {
-    $("authMessage").textContent = "You're logged in!";
-    await refreshUser();
-    await loadFeed();
-  }
-}
-
-async function logOut() {
-  await db.auth.signOut();
-  await refreshUser();
+  if(error)throw error;
+  $("postText").value="";
+  $("postImage").value="";
+  status("Your post has been shared!");
   await loadFeed();
-  status("You've logged out.");
+ }catch(e){status("Could not share post: "+e.message);}
 }
 
-async function uploadFile(bucket, file) {
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const path = currentUser.id + "/" + crypto.randomUUID() + "-" + safeName;
-
-  const {error} = await db.storage.from(bucket).upload(path, file);
-  if (error) throw error;
-
-  const {data} = db.storage.from(bucket).getPublicUrl(path);
-  return data.publicUrl;
-}
-
-async function publishPost() {
-  if (!currentUser) return;
-  const content = $("postText").value.trim();
-  const file = $("postImage").files[0];
-
-  if (!content && !file) {
-    status("Write something or choose a photo first.");
-    return;
-  }
-
-  try {
-    status("Sharing your post...");
-    let image_url = null;
-    if (file) image_url = await uploadFile("post-images", file);
-
-    const {error} = await db.from("posts").insert({
-      user_id:currentUser.id,
-      content,
-      image_url
-    });
-    if (error) throw error;
-
-    $("postText").value = "";
-    $("postImage").value = "";
-    status("Your post has been shared!");
-    await loadFeed();
-  } catch (error) {
-    status("Could not share post: " + error.message);
-  }
-}
-
-async function publishReel() {
-  if (!currentUser) return;
-  const file = $("reelVideo").files[0];
-  if (!file) {
-    status("Choose a video first.");
-    return;
-  }
-
-  try {
-    status("Uploading your reel...");
-    const video_url = await uploadFile("reels-videos", file);
-    const {error} = await db.from("reels").insert({
-      user_id:currentUser.id,
-      caption:$("reelCaption").value.trim(),
-      video_url
-    });
-    if (error) throw error;
-
-    $("reelCaption").value = "";
-    $("reelVideo").value = "";
-    status("Your reel has been shared!");
-    await loadFeed();
-  } catch (error) {
-    status("Could not upload reel: " + error.message);
-  }
-}
-
-async function toggleLike(item, target) {
-  if (!currentUser) return status("Log in to like posts and reels.");
-
-  const column = target === "post" ? "post_id" : "reel_id";
-  const {data:existing,error:findError} = await db.from("likes")
-    .select("id").eq("user_id",currentUser.id).eq(column,item).maybeSingle();
-
-  if (findError) return status(findError.message);
-
-  if (existing) {
-    const {error} = await db.from("likes").delete().eq("id",existing.id);
-    if (error) return status(error.message);
-  } else {
-    const {error} = await db.from("likes").insert({
-      user_id:currentUser.id,[column]:item
-    });
-    if (error) return status(error.message);
-  }
-  await loadFeed();
-}
-
-async function addComment(item, target) {
-  if (!currentUser) return status("Log in to comment.");
-
-  const content = prompt("Write your comment:");
-  if (!content || !content.trim()) return;
-
-  const column = target === "post" ? "post_id" : "reel_id";
-  const {error} = await db.from("comments").insert({
-    user_id:currentUser.id,[column]:item,content:content.trim()
+async function publishReel(){
+ if(!currentUser)return;
+ const file=$("reelVideo").files[0];
+ if(!file){status("Choose a video first.");return;}
+ try{
+  status("Uploading your reel...");
+  const video_url=await uploadFile("reels-videos",file);
+  const {error}=await db.from("reels").insert({
+   user_id:currentUser.id,
+   caption:$("reelCaption").value.trim(),
+   video_url
   });
-
-  if (error) status("Could not add comment: " + error.message);
-  else {
-    status("Comment added!");
-    await loadFeed();
-  }
+  if(error)throw error;
+  $("reelCaption").value="";
+  $("reelVideo").value="";
+  status("Your reel has been shared!");
+  await loadFeed();
+ }catch(e){status("Could not upload reel: "+e.message);}
 }
 
-async function loadFeed() {
-  const feed = $("feed");
-  feed.innerHTML = '<p class="muted">Loading community feed...</p>';
+async function toggleLike(id,type){
+ if(!currentUser){status("Log in to like posts and reels.");return;}
+ const column=type==="post"?"post_id":"reel_id";
+ const {data:existing,error:findError}=await db.from("likes")
+  .select("id").eq("user_id",currentUser.id).eq(column,id).maybeSingle();
+ if(findError){status(findError.message);return;}
+ if(existing){
+  const {error}=await db.from("likes").delete().eq("id",existing.id);
+  if(error){status(error.message);return;}
+ }else{
+  const {error}=await db.from("likes").insert({
+   user_id:currentUser.id,[column]:id
+  });
+  if(error){status(error.message);return;}
+ }
+ await loadFeed();
+}
 
-  const [postsResult,reelsResult] = await Promise.all([
-    db.from("posts").select("*, profiles(username,display_name)").order("created_at",{ascending:false}).limit(50),
-    db.from("reels").select("*, profiles(username,display_name)").order("created_at",{ascending:false}).limit(50)
+async function addComment(id,type){
+ if(!currentUser){status("Log in to comment.");return;}
+ const content=prompt("Write your comment:");
+ if(!content||!content.trim())return;
+ const column=type==="post"?"post_id":"reel_id";
+ const {error}=await db.from("comments").insert({
+  user_id:currentUser.id,[column]:id,content:content.trim()
+ });
+ if(error){status("Could not comment: "+error.message);}
+ else{status("Comment added!");await loadFeed();}
+}
+
+async function loadFeed(){
+ const feed=$("feed");
+ feed.textContent="Loading community feed...";
+ try{
+  const [p,r]=await Promise.all([
+   db.from("posts").select("*,profiles(username,display_name)").order("created_at",{ascending:false}).limit(50),
+   db.from("reels").select("*,profiles(username,display_name)").order("created_at",{ascending:false}).limit(50)
   ]);
-
-  if (postsResult.error || reelsResult.error) {
-    feed.textContent = "Could not load feed. " +
-      (postsResult.error?.message || reelsResult.error?.message);
-    return;
-  }
-
-  const items = [
-    ...(postsResult.data || []).map(x=>({...x,type:"post"})),
-    ...(reelsResult.data || []).map(x=>({...x,type:"reel"}))
+  if(p.error)throw p.error;
+  if(r.error)throw r.error;
+  const items=[
+   ...(p.data||[]).map(x=>({...x,type:"post"})),
+   ...(r.data||[]).map(x=>({...x,type:"reel"}))
   ].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
-
-  if (!items.length) {
-    feed.innerHTML = '<div class="panel"><p>No posts yet. Be the first to share something!</p></div>';
-    return;
+  if(!items.length){feed.textContent="No posts yet. Be the first to share!";return;}
+  feed.innerHTML="";
+  for(const item of items){
+   const column=item.type==="post"?"post_id":"reel_id";
+   const [likes,comments]=await Promise.all([
+    db.from("likes").select("id,user_id").eq(column,item.id),
+    db.from("comments").select("content,created_at,profiles(display_name,username)").eq(column,item.id).order("created_at",{ascending:false}).limit(3)
+   ]);
+   if(likes.error)throw likes.error;
+   if(comments.error)throw comments.error;
+   const liked=(likes.data||[]).some(x=>x.user_id===currentUser?.id);
+   const author=item.profiles?.display_name||item.profiles?.username||"ChillSPot member";
+   const media=item.type==="reel"
+    ?`<video src="${escapeHTML(item.video_url)}" controls playsinline preload="metadata"></video>`
+    :(item.image_url?`<img src="${escapeHTML(item.image_url)}" alt="Post photo">`:"");
+   const card=document.createElement("article");
+   card.className="post";
+   card.innerHTML=`
+    <p class="muted">${item.type==="reel"?"🎬 REEL":"📝 POST"} · ${escapeHTML(new Date(item.created_at).toLocaleString())}</p>
+    <h3>${escapeHTML(author)}</h3>
+    <p>${escapeHTML(item.content||item.caption||"")}</p>
+    ${media}
+    <div class="actions">
+     <button class="secondary like">${liked?"❤️ Liked":"🤍 Like"} (${likes.data.length})</button>
+     <button class="secondary comment">💬 Comment (${comments.data.length})</button>
+    </div>
+    <p class="muted comments"></p>`;
+   card.querySelector(".like").addEventListener("click",()=>toggleLike(item.id,item.type));
+   card.querySelector(".comment").addEventListener("click",()=>addComment(item.id,item.type));
+   card.querySelector(".comments").textContent=(comments.data||[]).map(c=>
+    (c.profiles?.display_name||c.profiles?.username||"Member")+": "+c.content
+   ).join(" · ");
+   feed.appendChild(card);
   }
-
-  feed.innerHTML = "";
-
-  for (const item of items) {
-    const column = item.type === "post" ? "post_id" : "reel_id";
-    const [likesResult,commentsResult] = await Promise.all([
-      db.from("likes").select("id,user_id").eq(column,item.id),
-      db.from("comments").select("id").eq(column,item.id)
-    ]);
-
-    const likes = likesResult.data || [];
-    const liked = likes.some(x=>x.user_id === currentUser?.id);
-    const author = item.profiles?.display_name || item.profiles?.username || "ChillSPot member";
-    const date = new Date(item.created_at).toLocaleString();
-
-    const card = document.createElement("article");
-    card.className = "post";
-
-    const media = item.type === "reel"
-      ? `<video src="${escapeHTML(item.video_url)}" controls playsinline preload="metadata"></video>`
-      : (item.image_url ? `<img src="${escapeHTML(item.image_url)}" alt="Post photo">` : "");
-
-    card.innerHTML = `
-      <p class="muted">${item.type === "reel" ? "🎬 REEL" : "📝 POST"} · ${escapeHTML(date)}</p>
-      <h3>${escapeHTML(author)}</h3>
-      <p>${escapeHTML(item.content || item.caption || "")}</p>
-      ${media}
-      <div class="actions">
-        <button class="secondary likeButton">${liked ? "❤️ Liked" : "🤍 Like"} (${likes.length})</button>
-        <button class="secondary commentButton">💬 Comment (${commentsResult.data?.length || 0})</button>
-      </div>
-      <p class="muted commentList"></p>
-    `;
-
-    card.querySelector(".likeButton").addEventListener("click",()=>toggleLike(item.id,item.type));
-    card.querySelector(".commentButton").addEventListener("click",()=>addComment(item.id,item.type));
-
-    const commentList = card.querySelector(".commentList");
-    const {data:recentComments} = await db.from("comments")
-      .select("content,profiles(display_name,username)")
-      .eq(column,item.id).order("created_at",{ascending:false}).limit(3);
-
-    if (recentComments?.length) {
-      commentList.textContent = recentComments.map(c =>
-        (c.profiles?.display_name || c.profiles?.username || "Member") + ": " + c.content
-      ).join(" · ");
-    }
-
-    feed.appendChild(card);
-  }
+ }catch(e){feed.textContent="Could not load feed: "+e.message;}
 }
 
 $("signup").addEventListener("click",signUp);
@@ -349,19 +269,12 @@ $("logout").addEventListener("click",logOut);
 $("publishPost").addEventListener("click",publishPost);
 $("publishReel").addEventListener("click",publishReel);
 
-db.auth.onAuthStateChange(async () => {
+(async function start(){
+ try{
   await refreshUser();
   await loadFeed();
-});
-
-(async function start() {
-  try {
-    await refreshUser();
-    await loadFeed();
-    status("ChillSPot is connected!");
-  } catch (error) {
-    status("Connection problem: " + error.message);
-  }
+  status("ChillSPot is connected!");
+ }catch(e){status("Connection problem: "+e.message);}
 })();
 </script>
 </body>
